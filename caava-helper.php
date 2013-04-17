@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.0
+Version: 1.1
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -30,6 +30,9 @@ Copyright 2013  Brandon Lavigne  (email : brandon@caavadesign.com)
  *
  * @return   string
  */
+
+require_once(__DIR__.'/lib/woo-instagram.php');
+
 function cv_post_first_image() {
 	global $post, $posts;
 	$first_img = '';
