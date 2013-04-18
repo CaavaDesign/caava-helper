@@ -118,7 +118,7 @@ class Caava_WooDojo_Widget_Instagram {
 		$parsed = wp_parse_args( $args, $defaults );
 
 		$data = $this->get_stored_data( $parsed );
-
+		
 		$html = $this->prepare_photos_html($data, $parsed);
 
 		return $html;
@@ -197,6 +197,8 @@ class Caava_WooDojo_Widget_Instagram {
 	private function request ( $endpoint, $params = array(), $method = 'post' ) {
 		$return = '';
 
+		
+
 		if ( $method == 'get' ) {
 			$url = $this->api_url . $endpoint;
 
@@ -210,10 +212,10 @@ class Caava_WooDojo_Widget_Instagram {
 						$url .= '&';
 					}
 
-					$url .= $k . '=' . $v;
+					$url .= $k . '=' . urlencode($v);
 				}
 			}
-
+			
 			$response = wp_remote_get( $url,
 				array(
 					'sslverify' => apply_filters( 'https_local_ssl_verify', false )
