@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.2
+Version: 1.2.1
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2

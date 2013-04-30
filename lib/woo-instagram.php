@@ -285,7 +285,7 @@ class Caava_WooDojo_Widget_Instagram {
 				if ( $instance['link_to_fullsize'] == true ) {
 					$html .= '<a href="' . esc_url( $v->link ) . '" title="' . esc_attr( $caption ) . '" class="' . esc_attr( $class ) . '"' . $anchor_params . '>' . "\n";
 				}
-					$html .= '<img src="' . esc_url( $v->images->$size_token->url ) . '"' . $params . ' alt="' . esc_attr( $caption ) . '" />' . "\n";
+					$html .= '<img src="' . esc_url( $v->images->$size_token->url ) . '"' . $params . ' alt="' . esc_attr( $caption ) . '" target="_blank" />' . "\n";
 				if ( $instance['link_to_fullsize'] == true ) {
 					$html .= '</a>' . "\n";
 				}
