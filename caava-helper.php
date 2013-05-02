@@ -254,8 +254,42 @@ function cv_disable_user($user_search) {
 	}
 }
 
-// Ajax Request
+/**
+ * Automatically close comments on post after set amount of time, default is 30 days
+ *
+ * @since 1.2.2
+ *
+ * @param    object     $id
+ * @return   object
+ */
+function cv_close_comments( $posts ) {
+	if ( !is_single() ) { return $posts; }
+	
+	$comment_status = $posts[0]->comment_status;
+	$ping_status = $posts[0]->ping_status;
 
+	$expiration_default = 30 * 24 * 60 * 60;
+	$expiration = apply_filters('cv_close_comments_after', $expiration_default);
+
+	$created = time() - strtotime( $posts[0]->post_date_gmt );
+	$last_modified = ( !empty( $posts[0]->post_modified_gmt ) ) ? time() - strtotime( $posts[0]->post_modified_gmt ) : $created;
+	
+	$should_close = ($last_modified > $expiration) ? true : false;
+
+	if( $comment_status == "open" && $should_close ){
+		$posts[0]->comment_status = 'closed';
+		$posts[0]->ping_status    = 'closed';
+		
+		$postArr = array();
+		$postArr['ID'] = $posts[0]->ID;
+		$postArr['comment_status'] = $posts[0]->comment_status;
+		$postArr['ping_status'] = $posts[0]->ping_status;
+		$result = wp_update_post($postArr);
+	}
+	return $posts;
+}
+
+// Ajax Request
 function cv_is_ajax_request() {
   return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
   strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
