@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.2.2
+Version: 1.3
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -64,6 +64,184 @@ function cv_helper_deactivate_plugin() {
 function cv_helper_uninstall_plugin() {
 	cv_remove_admin();
 }
+
+/**
+ * Common functions
+ * 
+ * @since 1.3
+ *
+ * @return   string
+ */
+class Caava
+{
+
+	private $remote_url = 'http://www.caavadesign.com/';
+	
+	function __construct()
+	{
+		# code...
+	}
+
+	public function remote_get($key, $url, $args = array(), $expiration = 604800 ){
+
+		if( empty( $expiration ) ){
+			$results = get_option( $key );
+		}else{
+			$results = get_transient( $key );
+		}
+		
+		if ( false === $results ) {
+			$response = wp_remote_get($url, $args);
+			$response_code = $response['response']['code'];
+			$body = $response['body'];
+
+			if($response_code == 200){
+
+				if(!$expiration){
+					update_option( $key, $body );
+				}else{
+					set_transient($key, $body, $expiration);
+				}
+				
+				return $body;
+			}else{
+				return false;
+			}
+		}
+		return $results;
+	}
+
+	public function is_local_dev(){
+		$allowed_hosts = array('localhost', '127.0.0.1');
+		
+		if (!isset($_SERVER['HTTP_HOST']) || !in_array( $_SERVER['HTTP_HOST'], $allowed_hosts) ){
+			return false;
+		}else{
+			return true;
+		}
+	}
+
+	/**
+     * Queries the remote URL via wp_remote_post and returns a json decoded response.
+     *
+     * @since 1.3
+     *
+     * @param string $action The name of the $_POST action var
+     * @param array $body The content to retrieve from the remote URL
+     * @param array $headers The headers to send to the remote URL
+     * @param string $return_format The format for returning content from the remote URL
+     * @return string|bool Json decoded response on success, false on failure
+     */
+    protected function perform_remote_request( $action, array $body = array(), array $headers = array(), $return_format = 'json' ) {
+
+        // Build body
+        $body = wp_parse_args( $body, array(
+            'cv-action'     => $action,
+            'cv-wp-version' => get_bloginfo( 'version' ),
+            'cv-referer'    => site_url(),
+            'cv-sitename'   => get_bloginfo( 'name' )
+        ) );
+        $body = http_build_query( $body, '', '&' );
+
+        // Build headers
+        $headers = wp_parse_args( $headers, array(
+            'Content-Type'   => 'application/x-www-form-urlencoded',
+            'Content-Length' => strlen( $body )
+        ) );
+
+        // Setup variable for wp_remote_post
+        $post = array(
+            'headers' => $headers,
+            'body'    => $body
+        );
+
+        // Perform the query and retrieve the response
+        $response      = wp_remote_post( esc_url_raw( $this->remote_url ), $post );
+
+        $response_code = wp_remote_retrieve_response_code( $response );
+
+        $response_body = wp_remote_retrieve_body( $response );
+
+        // Bail out early if there are any errors
+        if ( 200 != $response_code || is_wp_error( $response_body ) )
+            return false;
+
+        // Return body content if not json, else decode json
+        if ( 'json' != $return_format )
+            return $response_body;
+        else
+            return json_decode( $response_body );
+
+        return false;
+
+    }
+}
+
+/**
+ * Interact with the bugherd api
+ * 
+ * @since 1.3
+ *
+ */
+class BugHerd extends Caava
+{
+
+private $project_name;
+public $project_name_clean;
+public $project = '';
+private $cache_expires = 604800;
+	
+	function __construct()
+	{
+		$this->project_name = get_bloginfo( 'name' );
+		$this->project_name_clean = sanitize_title_with_dashes( $this->project_name );
+		$this->project = $this->get_project();
+		add_action('wp_head',array($this,'add_ui'));
+
+	}
+
+	public function get_project(){
+
+		delete_transient('bugherd-'.$this->project_name_clean);
+		
+		$data = get_transient('bugherd-'.$this->project_name_clean);
+		if ( false === $data ) {
+
+			$bugherd_status = $this->perform_remote_request( 'get-bugherd-status', array('post_type'=>'cv_api'),array(),'text' );
+			
+			if( !empty($bugherd_status) ){
+				set_transient('bugherd-'.$this->project_name_clean, $bugherd_status, $this->cache_expires);
+				return unserialize($bugherd_status);
+			}
+		}
+		return unserialize($data);
+	}
+
+	public function add_ui(){
+		
+		$embed_code = '<script type="text/javascript">
+	(function (d,t) {
+		var bh = d.createElement(t), s =
+		d.getElementsByTagName(t)[0];
+		bh.type = "text/javascript";
+		bh.src = "//www.bugherd.com/sidebarv2.js?apikey='.$this->project->api_key.'";
+		s.parentNode.insertBefore(bh, s);
+	})(document, "script");
+	</script>';
+		if($this->is_project_open() && is_user_logged_in() && current_user_can( 'activate_plugins' )){
+			echo $embed_code;
+		}
+	}
+
+
+	public function is_project_open(){
+		return $this->project->active;
+	}
+
+}
+
+$bugherd = new BugHerd;
+
 
 /**
  * Grab first image from $post->post_content
