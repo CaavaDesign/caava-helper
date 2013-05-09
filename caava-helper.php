@@ -24,6 +24,9 @@ Copyright 2013  Brandon Lavigne  (email : brandon@caavadesign.com)
 */
 
 require_once(__DIR__.'/lib/woo-instagram.php');
+require_once(__DIR__.'/lib/BugHerd/Api.php');
+require_once(__DIR__.'/lib/BugHerd/Exception.php');
+require_once(__DIR__.'/lib/BugHerd/Project.php');
 
 
 add_action('plugins_loaded','cv_create_admin');
