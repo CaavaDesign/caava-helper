@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.3.2
+Version: 1.3.3
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -204,8 +204,6 @@ private $cache_expires = 604800;
 	}
 
 	public function get_project(){
-
-		delete_transient('bugherd-'.$this->project_name_clean);
 		
 		$data = get_transient('bugherd-'.$this->project_name_clean);
 		if ( false === $data ) {
@@ -222,6 +220,7 @@ private $cache_expires = 604800;
 
 	public function add_ui(){
 		
+		if($this->is_project_open() && is_user_logged_in() && current_user_can( 'activate_plugins' )){
 		$embed_code = '<script type="text/javascript">
 	(function (d,t) {
 		var bh = d.createElement(t), s =
@@ -231,7 +230,7 @@ private $cache_expires = 604800;
 		s.parentNode.insertBefore(bh, s);
 	})(document, "script");
 	</script>';
-		if($this->is_project_open() && is_user_logged_in() && current_user_can( 'activate_plugins' )){
+		
 			echo $embed_code;
 		}
 	}
@@ -446,6 +445,7 @@ function cv_disable_user($user_search) {
 function cv_close_comments( $posts ) {
 	if ( !is_single() ) { return $posts; }
 	
+
 	$comment_status = $posts[0]->comment_status;
 	$ping_status = $posts[0]->ping_status;
 
