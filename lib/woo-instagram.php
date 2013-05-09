@@ -111,6 +111,7 @@ class Caava_WooDojo_Widget_Instagram {
 			'link_to_fullsize'=>true,
 			'feed_class'=>'',
 			'item_class'=>'',
+			'tag'=>NULL,
 			'element'=>'div'
 		);
 
@@ -153,10 +154,17 @@ class Caava_WooDojo_Widget_Instagram {
 	 */
 	public function get_stored_data ( $args ) {
 		$data = '';
-		$transient_key = 'woo-instagram-recent-photos';
+
+		$transient_key = !empty( $args['tag'] ) ? 'woo-instagram-photos-by-tag' : $transient_key = 'woo-instagram-recent-photos';
 		
 		if ( false === ( $data = get_transient( $transient_key ) ) ) {
-			$response = $this->request_recent_photos( $args );
+			if( !empty( $args['tag'] ) ){
+				$tag = $args['tag'];
+				unset($args['tag']);
+				$response = $this->request_by_tag( $tag, $args );
+			}else{
+				$response = $this->request_recent_photos( $args );
+			}
 
 			if ( isset( $response->data ) ) {
 				$data = json_encode( $response );
@@ -187,6 +195,27 @@ class Caava_WooDojo_Widget_Instagram {
 
 		return $data;
 	} // End request_recent_photos()
+
+	/**
+	 * Retrieve recent photos for the specified user.
+	 * @param  array $args
+	 * @return array
+	 */
+	public function request_by_tag ( $tag, $args ) {
+		$data = array();
+
+		$response = $this->request( '/v1/tags/'.$tag.'/media/recent', $args, 'get' );
+
+		if( is_wp_error( $response ) ) {
+		   $data = new StdClass;
+		} else {
+		   if ( isset( $response->meta->code ) && ( $response->meta->code == 200 ) ) {
+		   		$data = $response;
+		   }
+		}
+
+		return $data;
+	} // End request_by_tag()
 
 	/**
 	 * Make a request to the API.
