@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.4.1
+Version: 1.5
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -670,18 +670,18 @@ function cv_post_type_labels( $arg="" ){
 	$single = ucwords($arg);
 	$labels = array(
 	'name' => $plural,
-	'singular_name' => '{$single}',
+	'singular_name' => $single,
 	'add_new' => 'Add New',
-	'add_new_item' => 'Add New {$single}',
-	'edit_item' => 'Edit {$single}',
-	'new_item' => 'New {$single}',
-	'all_items' => 'All {$plural}',
-	'view_item' => 'View {$single}',
-	'search_items' => 'Search {$plural}',
-	'not_found' =>  'No {$plural} found',
-	'not_found_in_trash' => 'No {$plural} found in Trash', 
+	'add_new_item' => 'Add New '.$single,
+	'edit_item' => 'Edit '.$single,
+	'new_item' => 'New '.$single,
+	'all_items' => 'All '.$plural,
+	'view_item' => 'View '.$single,
+	'search_items' => 'Search '.$plural,
+	'not_found' =>  'No '.$plural.' found',
+	'not_found_in_trash' => 'No '.$plural.' found in Trash', 
 	'parent_item_colon' => '',
-	'menu_name' => '{$plural}'
+	'menu_name' => $plural
 	);
 	return $labels;
 }
