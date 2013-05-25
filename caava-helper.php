@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.4
+Version: 1.4.1
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -22,6 +22,10 @@ Copyright 2013  Brandon Lavigne  (email : brandon@caavadesign.com)
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+
+if( !defined('CAAVA') )
+	define( 'CAAVA', true );
 
 require_once dirname( __FILE__ ) . '/lib/woo-instagram.php';
 require_once dirname( __FILE__ ) . '/lib/BugHerd/Api.php';
@@ -135,59 +139,59 @@ class Caava
 	}
 
 	/**
-     * Queries the remote URL via wp_remote_post and returns a json decoded response.
-     *
-     * @since 1.3
-     *
-     * @param string $action The name of the $_POST action var
-     * @param array $body The content to retrieve from the remote URL
-     * @param array $headers The headers to send to the remote URL
-     * @param string $return_format The format for returning content from the remote URL
-     * @return string|bool Json decoded response on success, false on failure
-     */
-    protected function perform_remote_request( $action, array $body = array(), array $headers = array(), $return_format = 'json' ) {
+	 * Queries the remote URL via wp_remote_post and returns a json decoded response.
+	 *
+	 * @since 1.3
+	 *
+	 * @param string $action The name of the $_POST action var
+	 * @param array $body The content to retrieve from the remote URL
+	 * @param array $headers The headers to send to the remote URL
+	 * @param string $return_format The format for returning content from the remote URL
+	 * @return string|bool Json decoded response on success, false on failure
+	 */
+	protected function perform_remote_request( $action, array $body = array(), array $headers = array(), $return_format = 'json' ) {
 
-        // Build body
-        $body = wp_parse_args( $body, array(
-            'cv-action'     => $action,
-            'cv-wp-version' => get_bloginfo( 'version' ),
-            'cv-referer'    => site_url(),
-            'cv-sitename'   => get_bloginfo( 'name' )
-        ) );
-        $body = http_build_query( $body, '', '&' );
+		// Build body
+		$body = wp_parse_args( $body, array(
+			'cv-action'     => $action,
+			'cv-wp-version' => get_bloginfo( 'version' ),
+			'cv-referer'    => site_url(),
+			'cv-sitename'   => get_bloginfo( 'name' )
+		) );
+		$body = http_build_query( $body, '', '&' );
 
-        // Build headers
-        $headers = wp_parse_args( $headers, array(
-            'Content-Type'   => 'application/x-www-form-urlencoded',
-            'Content-Length' => strlen( $body )
-        ) );
+		// Build headers
+		$headers = wp_parse_args( $headers, array(
+			'Content-Type'   => 'application/x-www-form-urlencoded',
+			'Content-Length' => strlen( $body )
+		) );
 
-        // Setup variable for wp_remote_post
-        $post = array(
-            'headers' => $headers,
-            'body'    => $body
-        );
+		// Setup variable for wp_remote_post
+		$post = array(
+			'headers' => $headers,
+			'body'    => $body
+		);
 
-        // Perform the query and retrieve the response
-        $response      = wp_remote_post( esc_url_raw( $this->remote_url ), $post );
+		// Perform the query and retrieve the response
+		$response      = wp_remote_post( esc_url_raw( $this->remote_url ), $post );
 
-        $response_code = wp_remote_retrieve_response_code( $response );
+		$response_code = wp_remote_retrieve_response_code( $response );
 
-        $response_body = wp_remote_retrieve_body( $response );
+		$response_body = wp_remote_retrieve_body( $response );
 
-        // Bail out early if there are any errors
-        if ( 200 != $response_code || is_wp_error( $response_body ) )
-            return false;
+		// Bail out early if there are any errors
+		if ( 200 != $response_code || is_wp_error( $response_body ) )
+			return false;
 
-        // Return body content if not json, else decode json
-        if ( 'json' != $return_format )
-            return $response_body;
-        else
-            return json_decode( $response_body );
+		// Return body content if not json, else decode json
+		if ( 'json' != $return_format )
+			return $response_body;
+		else
+			return json_decode( $response_body );
 
-        return false;
+		return false;
 
-    }
+	}
 }
 
 /**
@@ -475,13 +479,13 @@ function cv_disable_user($user_search) {
  */
 function cv_close_comments( $posts ) {
 	if ( !is_single() ) { return $posts; }
-	
+	if ( !is_main_query() ) { return $posts; }
 
 	$comment_status = $posts[0]->comment_status;
 	$ping_status = $posts[0]->ping_status;
 
 	$expiration_default = 30 * 24 * 60 * 60;
-	$expiration = apply_filters('cv_close_comments_after', $expiration_default);
+	$expiration = apply_filters('cv_bugherd_visibility', $expiration_default);
 
 	$created = time() - strtotime( $posts[0]->post_date_gmt );
 	$last_modified = ( !empty( $posts[0]->post_modified_gmt ) ) ? time() - strtotime( $posts[0]->post_modified_gmt ) : $created;
@@ -571,9 +575,9 @@ function cv_rss_version() { return ''; }
  *
  */
 function cv_remove_wp_ver_css_js( $src ) {
-    if ( strpos( $src, 'ver=' ) )
-        $src = remove_query_arg( 'ver', $src );
-    return $src;
+	if ( strpos( $src, 'ver=' ) )
+		$src = remove_query_arg( 'ver', $src );
+	return $src;
 }
 
 /**
@@ -598,4 +602,86 @@ function cv_remove_dashboard_widgets() {
 // remove the p from around imgs (http://css-tricks.com/snippets/wordpress/remove-paragraph-tags-from-around-images/)
 function cv_no_ptags_on_images($content){
    return preg_replace('/<p>\s*(<a .*>)?\s*(<img .* \/>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
+}
+
+/**
+ * Shamelessly taken from wp-cli: https://github.com/wp-cli/wp-cli/blob/master/php/commands/scaffold.php#L289
+ *
+ * @since 1.4
+ *
+ */
+function cv_pluralize( $word ) {
+	$plural = array(
+		'/(quiz)$/i'                => '\1zes',
+		'/^(ox)$/i'                 => '\1en',
+		'/([m|l])ouse$/i'           => '\1ice',
+		'/(matr|vert|ind)ix|ex$/i'  => '\1ices',
+		'/(x|ch|ss|sh)$/i'          => '\1es',
+		'/([^aeiouy]|qu)ies$/i'     => '\1y',
+		'/([^aeiouy]|qu)y$/i'       => '\1ies',
+		'/(hive)$/i'                => '\1s',
+		'/(?:([^f])fe|([lr])f)$/i'  => '\1\2ves',
+		'/sis$/i'                   => 'ses',
+		'/([ti])um$/i'              => '\1a',
+		'/(buffal|tomat)o$/i'       => '\1oes',
+		'/(bu)s$/i'                 => '1ses',
+		'/(alias|status)/i'         => '\1es',
+		'/(octop|vir)us$/i'         => '1i',
+		'/(ax|test)is$/i'           => '\1es',
+		'/s$/i'                     => 's',
+		'/$/'                       => 's'
+	);
+
+	$uncountable = array( 'equipment', 'information', 'rice', 'money', 'species', 'series', 'fish', 'sheep' );
+
+	$irregular = array(
+		'person'    => 'people',
+		'man'       => 'men',
+		'woman'     => 'women',
+		'child'     => 'children',
+		'sex'       => 'sexes',
+		'move'      => 'moves'
+	);
+
+	$lowercased_word = strtolower( $word );
+
+	foreach ( $uncountable as $_uncountable ) {
+		if ( substr( $lowercased_word, ( -1 * strlen( $_uncountable ) ) ) == $_uncountable ) {
+			return $word;
+		}
+	}
+
+	foreach ( $irregular as $_plural=> $_singular ) {
+		if ( preg_match( '/('.$_plural.')$/i', $word, $arr ) ) {
+			return preg_replace( '/('.$_plural.')$/i', substr( $arr[0], 0, 1 ).substr( $_singular, 1 ), $word );
+		}
+	}
+
+	foreach ( $plural as $rule => $replacement ) {
+		if ( preg_match( $rule, $word ) ) {
+			return preg_replace( $rule, $replacement, $word );
+		}
+	}
+	return false;
+}
+
+function cv_post_type_labels( $arg="" ){
+	$plural = ucwords(cv_pluralize($arg));
+	$single = ucwords($arg);
+	$labels = array(
+	'name' => $plural,
+	'singular_name' => '{$single}',
+	'add_new' => 'Add New',
+	'add_new_item' => 'Add New {$single}',
+	'edit_item' => 'Edit {$single}',
+	'new_item' => 'New {$single}',
+	'all_items' => 'All {$plural}',
+	'view_item' => 'View {$single}',
+	'search_items' => 'Search {$plural}',
+	'not_found' =>  'No {$plural} found',
+	'not_found_in_trash' => 'No {$plural} found in Trash', 
+	'parent_item_colon' => '',
+	'menu_name' => '{$plural}'
+	);
+	return $labels;
 }
