@@ -2,7 +2,7 @@
 Plugin Name: Caava Helper Functions
 Plugin URI: http://caavadesign.com
 Description: A series of developer facing functionality created to optimize or enhance a WordPress site.
-Version: 1.5
+Version: 1.6
 Author: Brandon Lavigne
 Author URI: http://caavadesign.com
 License: GPL2
@@ -46,6 +46,7 @@ add_action('init',				'cv_head_cleanup');
 add_filter('the_generator',		'cv_rss_version');
 add_action('admin_menu',		'cv_remove_dashboard_widgets');
 add_filter('the_content',		'cv_no_ptags_on_images');
+add_filter( 'page_css_class', 'cw_page_css_class', 10, 5 );
 
 register_activation_hook(__FILE__,		'cv_helper_activate_plugin');
 register_deactivation_hook(__FILE__,	'cv_helper_deactivate_plugin');
@@ -233,8 +234,8 @@ private $cache_expires = 604800;
 	}
 
 	public function add_ui(){
-		
-		if($this->is_project_open() && is_user_logged_in() && current_user_can( 'activate_plugins' )){
+		$public_view_default = 'private';
+		$public_view = apply_filters('cv_bugherd_visibility', $public_view_default);
 		$embed_code = '<script type="text/javascript">
 	(function (d,t) {
 		var bh = d.createElement(t), s =
@@ -244,7 +245,10 @@ private $cache_expires = 604800;
 		s.parentNode.insertBefore(bh, s);
 	})(document, "script");
 	</script>';
-		
+
+		if('private' != $public_view && $this->is_project_open()){
+			echo $embed_code;
+		}elseif($this->is_project_open() && is_user_logged_in() && current_user_can( 'activate_plugins' )){
 			echo $embed_code;
 		}
 	}
@@ -274,9 +278,6 @@ function cv_post_first_image() {
 	$output = preg_match_all('/<img.+src=[\'"]([^\'"]+)[\'"].*>/i', $post->post_content, $matches);
 	if(count($matches [1])){
 		$first_img = $matches [1] [0];
-
-		$path = split(get_home_url(), $first_img); $path = ABSPATH.$path[1];
-		$first_img = $path;
 	}
 	return $first_img;
 }
@@ -320,12 +321,13 @@ function cv_wp_remote_get($key, $expiration, $url, $args = array()){
  * @return   string
  */
 function cv_wp_oembed_get($key, $expiration, $url, $args = array()){
+	global $post;
 
-	if ( false === ( $results = get_transient( $key ) ) ) {
+	if ( false === ( $results = cv_get_post_meta_transient( $post->ID, $key ) ) ) {
 		$response = wp_oembed_get($url, $args);
 		if($response){
 			$transient = $response;
-			set_transient($key, $transient, $expiration);
+			cv_set_post_meta_transient($post->ID, $key, $transient, $expiration);
 			return $transient;
 		}else{
 			return false;
@@ -479,13 +481,13 @@ function cv_disable_user($user_search) {
  */
 function cv_close_comments( $posts ) {
 	if ( !is_single() ) { return $posts; }
-	if ( !is_main_query() ) { return $posts; }
+	if ( !is_main_query() || empty($posts[0]) ) { return $posts; }
 
 	$comment_status = $posts[0]->comment_status;
 	$ping_status = $posts[0]->ping_status;
 
 	$expiration_default = 30 * 24 * 60 * 60;
-	$expiration = apply_filters('cv_bugherd_visibility', $expiration_default);
+	$expiration = apply_filters('cv_close_comments_after', $expiration_default);
 
 	$created = time() - strtotime( $posts[0]->post_date_gmt );
 	$last_modified = ( !empty( $posts[0]->post_modified_gmt ) ) ? time() - strtotime( $posts[0]->post_modified_gmt ) : $created;
@@ -685,3 +687,125 @@ function cv_post_type_labels( $arg="" ){
 	);
 	return $labels;
 }
+
+/**
+ * Adds ancestry to wp_list_pages, similar to wp_nav_menu
+ *
+ * @since 1.5
+ *
+ */
+function cw_page_css_class( $css_class, $page, $depth, $args, $current_page ) {
+  if ( !isset($args['post_type']) || !is_singular($args['post_type']) )
+    return $css_class;
+
+  global $post;
+  $current_page  = $post->ID;
+  $_current_page = $post;
+
+  if ( isset($_current_page->ancestors) && in_array($page->ID, (array) $_current_page->ancestors) )
+    $css_class[] = 'current_page_ancestor';
+  if ( $page->ID == $current_page )
+    $css_class[] = 'current_page_item';
+  elseif ( $_current_page && $page->ID == $_current_page->post_parent )
+    $css_class[] = 'current_page_parent';
+
+  return $css_class;
+}
+
+/**
+ * Delete a post meta transient.
+ */
+function cv_delete_post_meta_transient( $post_id, $transient = null, $value = null ) {
+  global $_wp_using_ext_object_cache, $wpdb;
+ 
+	$post_id = (int) $post_id;
+ 
+	do_action( 'cv_delete_post_meta_transient_' . $transient, $post_id, $transient );
+ 
+	if ( $_wp_using_ext_object_cache ) {
+		$result = wp_cache_delete( "{$transient}-{$post_id}", "post_meta_transient-{$post_id}" );
+	} else {
+		$meta_timeout = 'cv_transient_timeout_' . $transient;
+		$meta = 'cv_transient_' . $transient;
+		var_dump($transient);
+		if(empty($transient)){
+			$prepare = $wpdb->prepare( 
+					"DELETE FROM $wpdb->postmeta
+					WHERE post_id = %d
+					AND meta_key LIKE %s
+					",
+					$post_id, $meta.'%'
+				);
+			
+			$wpdb->query( $prepare );
+		}else{
+			$result = delete_post_meta( $post_id, $meta, $value );
+			if ( $result )
+				delete_post_meta( $post_id, $meta_timeout, $value );
+		}
+	}
+ 
+	if ( $result )
+		do_action( 'deleted_post_meta_transient', $transient, $post_id, $transient );
+	return $result;
+}
+ 
+/**
+ * Get the value of a post meta transient.
+ */
+function cv_get_post_meta_transient( $post_id, $transient ) {
+	global $_wp_using_ext_object_cache;
+ 
+	$post_id = (int) $post_id;
+ 
+ 
+	if ( $_wp_using_ext_object_cache ) {
+		$value = wp_cache_get( "{$transient}-{$post_id}", "post_meta_transient-{$post_id}" );
+	} else {
+		$meta_timeout = 'cv_transient_timeout_' . $transient;
+		$meta = 'cv_transient_' . $transient;
+		$value = get_post_meta( $post_id, $meta, true );
+		if ( !empty($value) && ! defined( 'WP_INSTALLING' ) ) {
+
+			if ( get_post_meta( $post_id, $meta_timeout, true ) < time() ) {
+				cv_delete_post_meta_transient( $post_id, $transient );
+				return false;
+			}
+		}
+		return false;
+	}
+	return apply_filters( 'post_meta_transient_' . $transient, $value, $post_id );
+}
+ 
+/**
+ * Set/update the value of a post meta transient.
+ */
+function cv_set_post_meta_transient( $post_id, $transient, $value, $expiration = 0 ) {
+	global $_wp_using_ext_object_cache;
+ 
+	$post_id = (int) $post_id;
+ 
+	$value = apply_filters( 'pre_set_post_meta_transient_' . $transient, $value, $post_id, $transient );
+ 
+	if ( $_wp_using_ext_object_cache ) {
+		$result = wp_cache_set( "{$transient}-{$post_id}", $value, "post_meta_transient-{$post_id}", $expiration );
+	} else {
+		$meta_timeout = 'cv_transient_timeout_' . $transient;
+		$meta = 'cv_transient_' . $transient;
+		if ( $expiration ) {
+			add_post_meta( $post_id, $meta_timeout, time() + $expiration, true );
+		}
+		$result = add_post_meta( $post_id, $meta, $value, true );
+	}
+	if ( $result ) {
+		do_action( 'set_post_meta_transient_' . $transient, $post_id, $transient );
+		do_action( 'setted_post_meta_transient', $transient, $post_id, $transient );
+	}
+	return $result;
+}
+function cv_on_post_update_flush_transient($post_id){
+	if ( !wp_is_post_revision( $post_id ) ) {
+		cv_delete_post_meta_transient( $post_id );
+	}
+}
+add_action('save_post', 'cv_on_post_update_flush_transient');
