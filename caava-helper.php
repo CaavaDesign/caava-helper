@@ -727,7 +727,6 @@ function cv_delete_post_meta_transient( $post_id, $transient = null, $value = nu
 	} else {
 		$meta_timeout = 'cv_transient_timeout_' . $transient;
 		$meta = 'cv_transient_' . $transient;
-		var_dump($transient);
 		if(empty($transient)){
 			$prepare = $wpdb->prepare( 
 					"DELETE FROM $wpdb->postmeta
