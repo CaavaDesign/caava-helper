@@ -200,7 +200,7 @@ class CaavaCommon
 	/**
 	 * Delete a post meta transient.
 	 */
-	public function delete_post_meta_transient( $post_id, $transient = null, $value = null ) {
+	public static function delete_post_meta_transient( $post_id, $transient = null, $value = null ) {
 		global $_wp_using_ext_object_cache, $wpdb;
 
 		$post_id = (int) $post_id;
@@ -237,7 +237,7 @@ class CaavaCommon
 	/**
 	 * Get the value of a post meta transient.
 	 */
-	public function get_post_meta_transient( $post_id, $transient ) {
+	public static function get_post_meta_transient( $post_id, $transient ) {
 		global $_wp_using_ext_object_cache;
 	 
 		$post_id = (int) $post_id;
@@ -252,7 +252,7 @@ class CaavaCommon
 			if ( !empty($value) && ! defined( 'WP_INSTALLING' ) ) {
 
 				if ( get_post_meta( $post_id, $meta_timeout, true ) < time() ) {
-					$this->delete_post_meta_transient( $post_id, $transient );
+					self::delete_post_meta_transient( $post_id, $transient );
 					return false;
 				}
 			}
@@ -264,7 +264,7 @@ class CaavaCommon
 	/**
 	 * Set/update the value of a post meta transient.
 	 */
-	public function set_post_meta_transient( $post_id, $transient, $value, $expiration = 0 ) {
+	public static function set_post_meta_transient( $post_id, $transient, $value, $expiration = 0 ) {
 		global $_wp_using_ext_object_cache;
 	 
 		$post_id = (int) $post_id;
@@ -325,14 +325,14 @@ class CaavaCommon
 	 * @param    array 	$args
 	 * @return   string
 	 */
-	public function wp_oembed_get($key, $expiration, $url, $args = array()){
+	public static function wp_oembed_get($key, $expiration, $url, $args = array()){
 		global $post;
 
-		if ( false === ( $results = $this->get_post_meta_transient( $post->ID, $key ) ) ) {
+		if ( false === ( $results = self::get_post_meta_transient( $post->ID, $key ) ) ) {
 			$response = wp_oembed_get($url, $args);
 			if($response){
 				$transient = $response;
-				$this->set_post_meta_transient($post->ID, $key, $transient, $expiration);
+				self::set_post_meta_transient($post->ID, $key, $transient, $expiration);
 				return $transient;
 			}else{
 				return false;
@@ -352,7 +352,7 @@ class CaavaCommon
 	 * @param    boolean $crop
 	 * @return   string
 	 */
-	public function resize( $id=0, $width=50, $height=50, $crop=true){ 
+	public static function resize( $id=0, $width=50, $height=50, $crop=true){ 
 
 		// Check if attachment is an image
 		if ( !$id || !wp_attachment_is_image($id) )
@@ -385,5 +385,32 @@ class CaavaCommon
 		$url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $new_image_info['path']);
 		
 		return $url;
+	}
+
+	/* implement getTweets */
+	public function get_tweets($count = 20, $username = false, $options = false) {
+
+		$config['key'] = get_option('cv_twitter_consumer_key');
+		$config['secret'] = get_option('cv_twitter_consumer_secret');
+		$config['token'] = get_option('cv_twitter_access_token');
+		$config['token_secret'] = get_option('cv_twitter_access_token_secret');
+		$config['screenname'] = get_option('cv_twitter_user_timeline');
+		$config['cache_expire'] = intval(get_option('cv_twitter_cache_expire'));
+		if ($config['cache_expire'] < 1) $config['cache_expire'] = 3600;
+		$config['directory'] = plugin_dir_path(__FILE__);
+
+
+		if ( false === $timeline = get_transient( 'cv_twitter_feed' ) ) {
+			eden()->setLoader();
+
+			$set_timeline = eden('twitter')->timeline($config['key'], $config['secret'], $config['token'], $config['token_secret']);
+			$set_timeline->setCount($count);
+			
+			$timeline = $set_timeline->getUserTimelines($config['screenname']);
+			set_transient( 'cv_twitter_feed', $timeline, $config['cache_expire'] );
+			//update_option('cv_twitter_last_error',$obj->st_last_error);
+		}
+		
+		return $timeline;
 	}
 }

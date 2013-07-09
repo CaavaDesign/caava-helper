@@ -10,6 +10,7 @@
  */
 
 require_once plugin_dir_path( __FILE__ ) . '/lib/woo-instagram.php';
+require_once plugin_dir_path( __FILE__ ) . '/lib/eden.php';
 require_once plugin_dir_path( __FILE__ ) . '/class-caava-common.php';
 
 /**
@@ -75,6 +76,8 @@ class CaavaHelper {
 		// Load plugin text domain
 		add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
 
+		add_action( 'admin_init', array( $this, 'register_twitter_settings' ) );
+
 		// Add the options page and menu item.
 		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menu' ) );
 
@@ -137,8 +140,8 @@ class CaavaHelper {
 	 * @param    boolean    $network_wide    True if WPMU superadmin uses "Network Activate" action, false if WPMU is disabled or plugin is activated on an individual blog.
 	 */
 	public static function activate( $network_wide ) {
-		$this->create_role();
-		$this->create_admin();
+		self::create_role();
+		self::create_admin();
 	}
 
 	/**
@@ -149,7 +152,7 @@ class CaavaHelper {
 	 * @param    boolean    $network_wide    True if WPMU superadmin uses "Network Deactivate" action, false if WPMU is disabled or plugin is deactivated on an individual blog.
 	 */
 	public static function deactivate( $network_wide ) {
-		$this->remove_admin();
+		self::remove_admin();
 	}
 
 	/**
@@ -238,6 +241,24 @@ class CaavaHelper {
 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'js/public.js', __FILE__ ), array( 'jquery' ), $this->version );
 	}
 
+	public function twitter_settings() {
+		$cv_twitter = array();
+		$cv_twitter[] = array('name'=>'cv_twitter_consumer_key','label'=>'Twitter Application Consumer Key');
+		$cv_twitter[] = array('name'=>'cv_twitter_consumer_secret','label'=>'Twitter Application Consumer Secret');
+		$cv_twitter[] = array('name'=>'cv_twitter_access_token','label'=>'Account Access Token');
+		$cv_twitter[] = array('name'=>'cv_twitter_access_token_secret','label'=>'Account Access Token Secret');
+		$cv_twitter[] = array('name'=>'cv_twitter_cache_expire','label'=>'Cache Duration (Default 3600)');
+		$cv_twitter[] = array('name'=>'cv_twitter_user_timeline','label'=>'Twitter Feed Screen Name*');
+		return $cv_twitter;
+	}
+
+	public function register_twitter_settings() {
+		$twitter_settings = self::twitter_settings();
+		foreach($twitter_settings as $setting) {
+			register_setting('cv_twitter_settings',$setting['name']);
+		}
+	}
+
 	/**
 	 * Register the administration menu for this plugin into the WordPress Dashboard menu.
 	 *
@@ -248,10 +269,12 @@ class CaavaHelper {
 		$this->plugin_screen_hook_suffix = add_menu_page(
 			__( 'Caava Design', $this->plugin_slug ),
 			__( 'Caava Design', $this->plugin_slug ),
-			'read',
+			'edit_caava_settings',
 			$this->plugin_slug,
 			array( $this, 'display_plugin_admin_page' )
 		);
+
+		add_submenu_page( $this->plugin_slug, 'Twitter Feed Credentials', 'Twitter Feed Auth', 'edit_caava_settings', 'cv_twitter_settings', array( $this, 'display_plugin_twitter_admin_page' ) );
 
 	}
 
@@ -264,12 +287,18 @@ class CaavaHelper {
 		include_once( 'views/admin.php' );
 	}
 
-	public function create_role(){
+	public function display_plugin_twitter_admin_page() {
+		include_once( 'views/admin-twitter.php' );
+	}
+
+	public static function create_role(){
 		//moderate_comments
 		// Complete list of admin capabilities
 		$admin_roles = get_role('administrator');
 		$admin_roles->capabilities['moderate_comments'] = false;
-		$result = add_role('caava_admin', 'Caava Admin', $admin_roles->capabilities);
+		add_role('caava_admin', 'Caava Admin', $admin_roles->capabilities);
+		$caava_admin = get_role( 'caava_admin' );
+		$caava_admin->add_cap( 'edit_caava_settings' ); 
 	}
 
 	/**
@@ -300,7 +329,7 @@ class CaavaHelper {
 	 * @since 1.2
 	 *
 	 */
-	public function create_admin(){
+	public static function create_admin(){
 		$admin_user = 'caava';
 		$admin_email = 'dev@caavadesign.com';
 		$user_id = username_exists( $admin_user );
@@ -319,7 +348,7 @@ class CaavaHelper {
 	 * @since 1.2
 	 *
 	 */
-	public function remove_admin(){
+	public static function remove_admin(){
 		$admin_user = 'caava';
 		$admin_email = 'dev@caavadesign.com';
 		$primary_admin = email_exists( get_option('admin_email') );
