@@ -394,21 +394,20 @@ class CaavaCommon
 		$config['secret'] = get_option('cv_twitter_consumer_secret');
 		$config['token'] = get_option('cv_twitter_access_token');
 		$config['token_secret'] = get_option('cv_twitter_access_token_secret');
-		$config['screenname'] = get_option('cv_twitter_user_timeline');
+		$config['screenname'] = (!empty($username)) ? $username : get_option('cv_twitter_user_timeline');
 		$config['cache_expire'] = intval(get_option('cv_twitter_cache_expire'));
 		if ($config['cache_expire'] < 1) $config['cache_expire'] = 3600;
 		$config['directory'] = plugin_dir_path(__FILE__);
 
 
-		if ( false === $timeline = get_transient( 'cv_twitter_feed' ) ) {
+		if ( false === $timeline = get_transient( 'cv_twitter_feed-'.$config['screenname'] ) ) {
 			eden()->setLoader();
 
 			$set_timeline = eden('twitter')->timeline($config['key'], $config['secret'], $config['token'], $config['token_secret']);
 			$set_timeline->setCount($count);
 			
 			$timeline = $set_timeline->getUserTimelines($config['screenname']);
-			set_transient( 'cv_twitter_feed', $timeline, $config['cache_expire'] );
-			//update_option('cv_twitter_last_error',$obj->st_last_error);
+			set_transient( 'cv_twitter_feed-'.$config['screenname'], $timeline, $config['cache_expire'] );
 		}
 		
 		return $timeline;
