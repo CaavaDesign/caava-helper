@@ -1,7 +1,7 @@
-<?php 
+<?php
 /**
  * reusable functions.
- * 
+ *
  * @since 1.3
  *
  */
@@ -10,7 +10,7 @@ class CaavaCommon
 {
 
 	private $remote_url = 'http://www.caavadesign.com/';
-	
+
 	function __construct()
 	{
 		# code...
@@ -23,7 +23,7 @@ class CaavaCommon
 		}else{
 			$results = get_transient( $key );
 		}
-		
+
 		if ( false === $results ) {
 			$response = wp_remote_get($url, $args);
 			$response_code = $response['response']['code'];
@@ -36,7 +36,7 @@ class CaavaCommon
 				}else{
 					set_transient($key, $body, $expiration);
 				}
-				
+
 				return $body;
 			}else{
 				return false;
@@ -46,8 +46,9 @@ class CaavaCommon
 	}
 
 	public function is_local_dev(){
-		$allowed_hosts = array('localhost', '127.0.0.1');
-		
+
+		$allowed_hosts = apply_filters( 'cv_local_dev_hosts', array('localhost', '127.0.0.1') );
+
 		if (!isset($_SERVER['HTTP_HOST']) || !in_array( $_SERVER['HTTP_HOST'], $allowed_hosts) ){
 			return false;
 		}else{
@@ -190,7 +191,7 @@ class CaavaCommon
 		'view_item' => 'View '.$single,
 		'search_items' => 'Search '.$plural,
 		'not_found' =>  'No '.$plural.' found',
-		'not_found_in_trash' => 'No '.$plural.' found in Trash', 
+		'not_found_in_trash' => 'No '.$plural.' found in Trash',
 		'parent_item_colon' => '',
 		'menu_name' => $plural
 		);
@@ -206,21 +207,21 @@ class CaavaCommon
 		$post_id = (int) $post_id;
 
 		do_action( 'cv_delete_post_meta_transient_' . $transient, $post_id, $transient );
-		
+
 		if ( $_wp_using_ext_object_cache ) {
 			$result = wp_cache_delete( "{$transient}-{$post_id}", "post_meta_transient-{$post_id}" );
 		} else {
 			$meta_timeout = 'cv_transient_timeout_' . $transient;
 			$meta = 'cv_transient_' . $transient;
 			if(empty($transient)){
-				$prepare = $wpdb->prepare( 
+				$prepare = $wpdb->prepare(
 						"DELETE FROM $wpdb->postmeta
 						WHERE post_id = %d
 						AND meta_key LIKE %s
 						",
 						$post_id, $meta.'%'
 					);
-				
+
 				$wpdb->query( $prepare );
 			}else{
 				$result = delete_post_meta( $post_id, $meta, $value );
@@ -228,21 +229,21 @@ class CaavaCommon
 					delete_post_meta( $post_id, $meta_timeout, $value );
 			}
 		}
-	 
+
 		if ( $result )
 			do_action( 'deleted_post_meta_transient', $transient, $post_id, $transient );
 		return $result;
 	}
-	 
+
 	/**
 	 * Get the value of a post meta transient.
 	 */
 	public static function get_post_meta_transient( $post_id, $transient ) {
 		global $_wp_using_ext_object_cache;
-	 
+
 		$post_id = (int) $post_id;
-	 
-	 
+
+
 		if ( $_wp_using_ext_object_cache ) {
 			$value = wp_cache_get( "{$transient}-{$post_id}", "post_meta_transient-{$post_id}" );
 		} else {
@@ -260,17 +261,17 @@ class CaavaCommon
 		}
 		return apply_filters( 'post_meta_transient_' . $transient, $value, $post_id );
 	}
-	 
+
 	/**
 	 * Set/update the value of a post meta transient.
 	 */
 	public static function set_post_meta_transient( $post_id, $transient, $value, $expiration = 0 ) {
 		global $_wp_using_ext_object_cache;
-	 
+
 		$post_id = (int) $post_id;
-	 
+
 		$value = apply_filters( 'pre_set_post_meta_transient_' . $transient, $value, $post_id, $transient );
-	 
+
 		if ( $_wp_using_ext_object_cache ) {
 			$result = wp_cache_set( "{$transient}-{$post_id}", $value, "post_meta_transient-{$post_id}", $expiration );
 		} else {
@@ -289,7 +290,7 @@ class CaavaCommon
 	}
 	/**
 	 * Extend wp_remote_get adds WP transient caching
-	 * 
+	 *
 	 * @since 1.0
 	 *
 	 * @param    string $key
@@ -316,7 +317,7 @@ class CaavaCommon
 
 	/**
 	 * Extend wp_oembed_get adds WP transient caching
-	 * 
+	 *
 	 * @since 1.0
 	 *
 	 * @param    string $key
@@ -352,7 +353,7 @@ class CaavaCommon
 	 * @param    boolean $crop
 	 * @return   string
 	 */
-	public static function resize( $id=0, $width=50, $height=50, $crop=true){ 
+	public static function resize( $id=0, $width=50, $height=50, $crop=true){
 
 		// Check if attachment is an image
 		if ( !$id || !wp_attachment_is_image($id) )
@@ -360,56 +361,31 @@ class CaavaCommon
 
 		$upload_dir = wp_upload_dir();
 		$img_meta = wp_get_attachment_metadata( $id );
-		
+
 		// attachment url converted to image path
 		$file = $upload_dir['basedir'] . '/' . $img_meta['file'];
 
 		$image = wp_get_image_editor( $file );
 
-		// legacy error explanation. 
+		// legacy error explanation.
 		if ( is_wp_error( $image ) )
 			return $image->get_error_message();
 
 		// generate intended file name and check if the image exists.
 		$new_file_path = $image->generate_filename($suffix = $width.'x'.$height);
-		
+
 		// If this file already exists, return the image url.
 		if(file_exists($new_file_path))
 			return str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $new_file_path);
-		
+
 		// resize image and save
 		$image->resize( $width, $height, $crop );
 		$new_image_info = $image->save();
-		
+
 		// convert path to url
 		$url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $new_image_info['path']);
-		
+
 		return $url;
 	}
 
-	/* implement getTweets */
-	public function get_tweets($count = 20, $username = false, $options = false) {
-
-		$config['key'] = get_option('cv_twitter_consumer_key');
-		$config['secret'] = get_option('cv_twitter_consumer_secret');
-		$config['token'] = get_option('cv_twitter_access_token');
-		$config['token_secret'] = get_option('cv_twitter_access_token_secret');
-		$config['screenname'] = (!empty($username)) ? $username : get_option('cv_twitter_user_timeline');
-		$config['cache_expire'] = intval(get_option('cv_twitter_cache_expire'));
-		if ($config['cache_expire'] < 1) $config['cache_expire'] = 3600;
-		$config['directory'] = plugin_dir_path(__FILE__);
-
-
-		if ( false === $timeline = get_transient( 'cv_twitter_feed-'.$config['screenname'] ) ) {
-			eden()->setLoader();
-
-			$set_timeline = eden('twitter')->timeline($config['key'], $config['secret'], $config['token'], $config['token_secret']);
-			$set_timeline->setCount($count);
-			
-			$timeline = $set_timeline->getUserTimelines($config['screenname']);
-			set_transient( 'cv_twitter_feed-'.$config['screenname'], $timeline, $config['cache_expire'] );
-		}
-		
-		return $timeline;
-	}
 }

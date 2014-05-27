@@ -1,1 +1,46 @@
 /* This stylesheet is used to style the admin option form of the plugin. */
+
+html{
+	background-color: #e8e5d5;
+}
+
+#dashboard_bugherd_activity li {
+width: 50%;
+float: left;
+margin-bottom: 10px;
+}
+
+#dashboard_bugherd_activity .note{
+	clear:both;
+}
+
+#dashboard_bugherd_activity li i:before, #dashboard_bugherd_activity li i:before {
+content: '\f159';
+font: 400 20px/1 dashicons;
+speak: none;
+display: block;
+float: left;
+margin: 0 5px 0 0;
+padding: 0;
+text-indent: 0;
+text-align: center;
+position: relative;
+-webkit-font-smoothing: antialiased;
+text-decoration: none!important;
+}
+
+#dashboard_bugherd_activity .issue-backlog i:before {
+content: "\f238";
+}
+#dashboard_bugherd_activity .issue-archive i:before {
+content: "\f313";
+}
+#dashboard_bugherd_activity .issue-todo i:before {
+content: "\f226";
+}
+#dashboard_bugherd_activity .issue-doing i:before {
+content: "\f311";
+}
+#dashboard_bugherd_activity .issue-done i:before {
+content: "\f147";
+}
