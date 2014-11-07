@@ -71,7 +71,7 @@ class CaavaHelper {
 	 *
 	 * @since     1.0.0
 	 */
-	private function __construct() {		
+	private function __construct() {
 
 		// Load plugin text domain
 		add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
@@ -95,6 +95,9 @@ class CaavaHelper {
 
 		// Creates Caava Admin
 		add_action( 'plugins_loaded',	array( $this, 'create_admin') );
+
+		// Update Caava Admin Caps on user log-in
+		add_action('wp_login',				array( $this, 'update_role_caps') );
 
 		// Removes Caava Admin from WP Admin interface
 		add_action( 'pre_user_query',	array( $this, 'remove_user_visibility') );
@@ -298,7 +301,7 @@ class CaavaHelper {
 		$admin_roles->capabilities['moderate_comments'] = false;
 		add_role('caava_admin', 'Caava Admin', $admin_roles->capabilities);
 		$caava_admin = get_role( 'caava_admin' );
-		$caava_admin->add_cap( 'edit_caava_settings' ); 
+		$caava_admin->add_cap( 'edit_caava_settings' );
 	}
 
 	/**
@@ -333,13 +336,33 @@ class CaavaHelper {
 		$admin_user = 'caava';
 		$admin_email = 'dev@caavadesign.com';
 		$user_id = username_exists( $admin_user );
-		
+
 
 		if ( !$user_id && !email_exists($admin_email) ) {
 			$random_password = wp_generate_password( $length=12, $include_standard_special_chars=false );
 			$user_id = wp_insert_user( array ('user_login' => $admin_user, 'user_pass' => $random_password, 'user_email' => $admin_email, 'role' => 'caava_admin') ) ;
 			wp_new_user_notification( $user_id, $random_password );
 		}
+	}
+
+	public static function update_role_caps(){
+		//moderate_comments
+		// Complete list of admin capabilities
+		$caava_role = get_role('caava_admin');
+		if(empty($caava_role))
+			return false;
+
+		$admin_roles = get_role('administrator');
+		$admin_roles->capabilities['moderate_comments'] = false;
+
+		// we want admin capabilities, including anything added by plugins.
+		$cap_diff = array_diff_assoc($admin_roles->capabilities, $caava_role->capabilities );
+
+		foreach($cap_diff as $key => $value){
+			$caava_role->add_cap( $key );
+		}
+
+
 	}
 
 	/**
@@ -368,8 +391,8 @@ class CaavaHelper {
 		global $current_user;
 		$admin_user = 'caava';
 		$username = $current_user->user_login;
-		
-		if ( username_exists( $admin_user ) && ( $username != $admin_user ) ) { 
+
+		if ( username_exists( $admin_user ) && ( $username != $admin_user ) ) {
 			global $wpdb;
 			$user_search->query_where = str_replace('WHERE 1=1',
 			  "WHERE 1=1 AND {$wpdb->users}.user_login != '".$admin_user."'",$user_search->query_where);
