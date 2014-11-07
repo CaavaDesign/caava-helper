@@ -1,0 +1,63 @@
+// assign default value to all undefined variables
+
+
+// core variables
+$brand-colors: #e8e5d5, #c7c4ac, #8f8e7d, #f26951, #ef4426;
+$text-color: nth($brand-colors,3) !default;
+$base-color: nth($brand-colors,1) !default;
+$icon-color: nth($brand-colors,2) !default;
+$highlight-color: nth($brand-colors,3) !default;
+$notification-color: nth($brand-colors,2) !default;
+$action-color: nth($brand-colors,2) !default;
+
+// global
+
+$body-background: nth($brand-colors,2) !default;
+
+$link: nth($brand-colors,4) !default;
+$link-focus: nth($brand-colors,5) !default;
+
+$button-color: $action-color !default;
+$form-checked: $highlight-color !default;
+
+
+// admin menu & admin-bar
+
+$menu-text: $text-color !default;
+$menu-icon: $icon-color !default;
+$menu-background: $base-color !default;
+
+$adminbar-text: $base-color !default;
+$adminbar-icon: $icon-color !default;
+$adminbar-background: $text-color !default;
+
+$menu-highlight-text: $text-color !default;
+$menu-highlight-icon: $text-color !default;
+$menu-highlight-background: $highlight-color !default;
+
+$menu-current-text: $menu-highlight-text !default;
+$menu-current-icon: $menu-highlight-icon !default;
+$menu-current-background: $menu-highlight-background !default;
+
+$menu-submenu-text: mix( $base-color, $text-color, 30% ) !default;
+$menu-submenu-background: darken( $base-color, 7% ) !default;
+$menu-submenu-background-alt: desaturate( lighten( $menu-background, 7% ), 7% ) !default;
+
+$menu-submenu-focus-text: $highlight-color !default;
+$menu-submenu-current-text: $text-color !default;
+
+$menu-bubble-text: $text-color !default;
+$menu-bubble-background: $notification-color !default;
+$menu-bubble-current-text: $text-color !default;
+$menu-bubble-current-background: $menu-submenu-background !default;
+
+$menu-collapse-text: $menu-icon !default;
+$menu-collapse-icon: $menu-icon !default;
+$menu-collapse-focus-text: $text-color !default;
+$menu-collapse-focus-icon: $menu-highlight-icon !default;
+
+$adminbar-avatar-frame: lighten( $menu-background, 7% ) !default;
+$adminbar-input-background: lighten( $menu-background, 7% ) !default;
+
+$menu-customizer-text: mix( $base-color, $text-color, 40% ) !default;
+
