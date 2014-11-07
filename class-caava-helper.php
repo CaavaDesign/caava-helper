@@ -86,10 +86,6 @@ class CaavaHelper {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
-		// Define custom functionality. Read more about actions and filters: http://codex.wordpress.org/Plugin_API#Hooks.2C_Actions_and_Filters
-		//add_action( 'TODO', array( $this, 'action_method_name' ) );
-		//add_filter( 'TODO', array( $this, 'filter_method_name' ) );
-
 		// Creates Caava Admin
 		add_action( 'plugins_loaded',	array( $this, 'create_admin') );
 
@@ -529,33 +525,6 @@ class CaavaHelper {
 		if ( !wp_is_post_revision( $post_id ) ) {
 			CaavaCommon::delete_post_meta_transient( $post_id );
 		}
-	}
-
-
-	/**
-	 * NOTE:  Actions are points in the execution of a page or process
-	 *        lifecycle that WordPress fires.
-	 *
-	 *        WordPress Actions: http://codex.wordpress.org/Plugin_API#Actions
-	 *        Action Reference:  http://codex.wordpress.org/Plugin_API/Action_Reference
-	 *
-	 * @since    1.0.0
-	 */
-	public function action_method_name() {
-		// TODO: Define your action hook callback here
-	}
-
-	/**
-	 * NOTE:  Filters are points of execution in which WordPress modifies data
-	 *        before saving it or sending it to the browser.
-	 *
-	 *        WordPress Filters: http://codex.wordpress.org/Plugin_API#Filters
-	 *        Filter Reference:  http://codex.wordpress.org/Plugin_API/Filter_Reference
-	 *
-	 * @since    1.0.0
-	 */
-	public function filter_method_name() {
-		// TODO: Define your filter hook callback here
 	}
 
 }
